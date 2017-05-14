@@ -14,6 +14,7 @@ using Shadowsocks.Model;
 using Shadowsocks.Properties;
 using Shadowsocks.Util;
 using System.Linq;
+using Shadowsocks.Free;
 
 namespace Shadowsocks.Controller
 {
@@ -30,6 +31,7 @@ namespace Shadowsocks.Controller
         private Listener _listener;
         private PACServer _pacServer;
         private Configuration _config;
+        private FreeConfiguration _freeConfig;
         private StrategyManager _strategyManager;
         private PrivoxyRunner privoxyRunner;
         private GFWListUpdater gfwListUpdater;
@@ -79,6 +81,7 @@ namespace Shadowsocks.Controller
         public ShadowsocksController()
         {
             _config = Configuration.Load();
+            _freeConfig = FreeConfiguration.Load();
             StatisticsConfiguration = StatisticsStrategyConfiguration.Load();
             _strategyManager = new StrategyManager(this);
             StartReleasingMemory();
@@ -231,7 +234,8 @@ namespace Shadowsocks.Controller
         {
             _config.isVerboseLogging = enabled;
             SaveConfig(_config);
-            if ( VerboseLoggingStatusChanged != null ) {
+            if (VerboseLoggingStatusChanged != null)
+            {
                 VerboseLoggingStatusChanged(this, new EventArgs());
             }
         }
@@ -301,7 +305,7 @@ namespace Shadowsocks.Controller
             string tag = string.Empty;
             string parts = $"{server.method}:{server.password}@{server.server}:{server.server_port}";
             string base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(parts));
-            if(!server.remarks.IsNullOrEmpty())
+            if (!server.remarks.IsNullOrEmpty())
             {
                 tag = $"#{HttpUtility.UrlEncode(server.remarks, Encoding.UTF8)}";
             }
@@ -592,6 +596,38 @@ namespace Shadowsocks.Controller
             Clipboard.SetDataObject(_pacServer.PacUrl);
         }
 
+        public void UpdateFreeServerFromConfig()
+        {
+            var newServers = FreeConfiguration.UpdateFromConfig(_freeConfig);
+            if (newServers != null)
+            {
+                AddFreeServerToConfiguration(newServers);
+
+                SaveConfig(_config);
+                Logging.Info("免费服务器更新成功");
+            }
+
+        }
+
+
+        public void UpdateFreeServerFromUrl()
+        {
+            var newServers = FreeConfiguration.UpdateFromUrl(_freeConfig);
+            if (newServers != null)
+            {
+                AddFreeServerToConfiguration(newServers);
+                SaveConfig(_config);
+            }
+        }
+        private void AddFreeServerToConfiguration(List<Server> servers)
+        {
+            foreach (var nServer in servers)
+            {
+                _config.configs.RemoveAll(s => String.Compare(s.server, nServer.server, StringComparison.InvariantCultureIgnoreCase) == 0);
+                _config.configs.Add(nServer);
+            }
+        }
+
         #region Memory Management
 
         private void StartReleasingMemory()
@@ -633,7 +669,7 @@ namespace Shadowsocks.Controller
             {
                 previous = trafficPerSecondQueue.Last();
                 current = new TrafficPerSecond();
-                
+
                 current.inboundCounter = InboundCounter;
                 current.outboundCounter = OutboundCounter;
                 current.inboundIncreasement = current.inboundCounter - previous.inboundCounter;

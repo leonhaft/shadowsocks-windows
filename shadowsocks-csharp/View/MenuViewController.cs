@@ -14,6 +14,7 @@ using Shadowsocks.Model;
 using Shadowsocks.Properties;
 using Shadowsocks.Util;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Shadowsocks.View
 {
@@ -99,7 +100,7 @@ namespace Shadowsocks.View
                 _isFirstRun = true;
                 ShowConfigForm();
             }
-            else if(config.autoCheckUpdate)
+            else if (config.autoCheckUpdate)
             {
                 _isStartupChecking = true;
                 updateChecker.CheckUpdate(config, 3000);
@@ -213,9 +214,9 @@ namespace Shadowsocks.View
                         {
                             Color flyBlue = Color.FromArgb(25, 125, 191);
                             // Multiply with flyBlue
-                            int red   = color.R * flyBlue.R / 255;
-                            int green = color.G * flyBlue.G / 255; 
-                            int blue  = color.B * flyBlue.B / 255;
+                            int red = color.R * flyBlue.R / 255;
+                            int green = color.G * flyBlue.G / 255;
+                            int blue = color.B * flyBlue.B / 255;
                             iconCopy.SetPixel(x, y, Color.FromArgb(color.A, red, green, blue));
                         }
                     }
@@ -270,7 +271,9 @@ namespace Shadowsocks.View
                     new MenuItem("-"),
                     CreateMenuItem("Share Server Config...", new EventHandler(this.QRCodeItem_Click)),
                     CreateMenuItem("Scan QRCode from Screen...", new EventHandler(this.ScanQRCodeItem_Click)),
-                    CreateMenuItem("Import URL from Clipboard...", new EventHandler(this.ImportURLItem_Click))
+                    CreateMenuItem("Import URL from Clipboard...", new EventHandler(this.ImportURLItem_Click)),
+                    CreateMenuItem("Update Free From Config",new EventHandler(this.UpdateFreeFormConfig_Click)),
+                    CreateMenuItem("Update Free From Url",new EventHandler(this.UpdateFreeFormUrl_Click))
                 }),
                 CreateMenuGroup("PAC ", new MenuItem[] {
                     this.localPACItem = CreateMenuItem("Local PAC", new EventHandler(this.LocalPACItem_Click)),
@@ -324,7 +327,8 @@ namespace Shadowsocks.View
             ShareOverLANItem.Checked = controller.GetConfigurationCopy().shareOverLan;
         }
 
-        void controller_VerboseLoggingStatusChanged(object sender, EventArgs e) {
+        void controller_VerboseLoggingStatusChanged(object sender, EventArgs e)
+        {
             VerboseLoggingToggleItem.Checked = controller.GetConfigurationCopy().isVerboseLogging;
         }
 
@@ -433,7 +437,7 @@ namespace Shadowsocks.View
             }
 
             // user wants a seperator item between strategy and servers menugroup
-            items.Add( i++, new MenuItem("-") );
+            items.Add(i++, new MenuItem("-"));
 
             int strategyCount = i;
             Configuration configuration = controller.GetConfigurationCopy();
@@ -584,7 +588,7 @@ namespace Shadowsocks.View
 
         private void notifyIcon1_Click(object sender, MouseEventArgs e)
         {
-            if ( e.Button == MouseButtons.Middle )
+            if (e.Button == MouseButtons.Middle)
             {
                 ShowLogForm();
             }
@@ -646,9 +650,10 @@ namespace Shadowsocks.View
             controller.SelectStrategy((string)item.Tag);
         }
 
-        private void VerboseLoggingToggleItem_Click( object sender, EventArgs e ) {
-            VerboseLoggingToggleItem.Checked = ! VerboseLoggingToggleItem.Checked;
-            controller.ToggleVerboseLogging( VerboseLoggingToggleItem.Checked );
+        private void VerboseLoggingToggleItem_Click(object sender, EventArgs e)
+        {
+            VerboseLoggingToggleItem.Checked = !VerboseLoggingToggleItem.Checked;
+            controller.ToggleVerboseLogging(VerboseLoggingToggleItem.Checked);
         }
 
         private void StatisticsConfigItem_Click(object sender, EventArgs e)
@@ -756,6 +761,19 @@ namespace Shadowsocks.View
             {
                 ShowConfigForm();
             }
+        }
+
+        private void UpdateFreeFormConfig_Click(object sender, EventArgs e)
+        {
+            Task.Run(() =>
+            {
+                controller.UpdateFreeServerFromConfig();
+            });
+        }
+
+        private void UpdateFreeFormUrl_Click(object sender, EventArgs e)
+        {
+            controller.UpdateFreeServerFromUrl();
         }
 
         void splash_FormClosed(object sender, FormClosedEventArgs e)
