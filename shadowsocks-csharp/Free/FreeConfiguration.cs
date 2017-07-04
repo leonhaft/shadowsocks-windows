@@ -66,7 +66,19 @@ namespace Shadowsocks.Free
                 if (qrCodeImage != null)
                 {
                     var loadServers = DecodeQRCode(qrCodeImage);
-                    servers.AddRange(loadServers);
+                    if(loadServers==null||loadServers.Any()==false)
+                    {
+                        Logging.Info($"{server.Url}没有获取到SS地址");
+                    }
+                    else
+                    {
+                        servers.AddRange(loadServers);
+                        Logging.Info($"{server.Url}获取成功");
+                    }
+                }
+                else
+                {
+                    Logging.Info($"{server.Url}获取失败");
                 }
             }
 
@@ -154,16 +166,23 @@ namespace Shadowsocks.Free
         {
             var reader = new BarcodeReader();
             var ssConfig = new List<Server>();
-
-            var bitmap = (Bitmap)Bitmap.FromStream(qrCodeStream);
-            var result = reader.Decode(bitmap);
-            if (result != null)
+            Bitmap bitmap = null;
+            try
             {
-                var findServers = Server.GetServers(result.Text);
-                if (findServers != null)
+                bitmap = (Bitmap)Bitmap.FromStream(qrCodeStream);
+                var result = reader.Decode(bitmap);
+                if (result != null)
                 {
-                    ssConfig.AddRange(findServers);
+                    var findServers = Server.GetServers(result.Text);
+                    if (findServers != null)
+                    {
+                        ssConfig.AddRange(findServers);
+                    }
                 }
+            }
+            catch (Exception)
+            {
+                Logging.Info("非有效QRCode图片");
             }
 
             return ssConfig;
