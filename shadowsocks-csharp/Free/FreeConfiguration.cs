@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using ZXing;
+using System.Net.NetworkInformation;
 
 namespace Shadowsocks.Free
 {
@@ -66,12 +67,13 @@ namespace Shadowsocks.Free
                 if (qrCodeImage != null)
                 {
                     var loadServers = DecodeQRCode(qrCodeImage);
-                    if(loadServers==null||loadServers.Any()==false)
+                    if (loadServers == null || loadServers.Any() == false)
                     {
                         Logging.Info($"{server.Url}没有获取到SS地址");
                     }
                     else
                     {
+                        loadServers.ForEach(s => s.remarks = $"{ server.Name}({PingReply(s.server)})");
                         servers.AddRange(loadServers);
                         Logging.Info($"{server.Url}获取成功");
                     }
@@ -186,6 +188,21 @@ namespace Shadowsocks.Free
             }
 
             return ssConfig;
+        }
+        private static long PingReply(string ip)
+        {
+            using (var ping = new Ping())
+            {
+                var reply = ping.Send(ip, 120);
+                if (reply.Status == IPStatus.Success)
+                {
+                    return reply.RoundtripTime;
+                }
+                else
+                {
+                    return 0;
+                }
+            }
         }
     }
 }
